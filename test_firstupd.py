@@ -1,28 +1,34 @@
 # ФИО: Зубов Владислав Витальевич
-# Дата: 2026-11-10
-# Описание изменений:Добавил автоматическое сохранение двух скриншотов, если нажимаем на смену темы, добавил проверку смены кода
+# Дата: 2026-11-11
+# Описание изменений: добавил сохранение двух скриншотов и автоматическое закрытие окна сразу после ручного клика по смене темы
 
 import pytest
 from playwright.sync_api import Page, expect
 
-def test_visual_theme_switch(page: Page):
-    # Переходим на сайт
-    page.goto("https://playwright.dev")
+@pytest.fixture(scope="function", autouse=True)
+def before_each_after_each(page: Page):
+    print("before the test runs")
+    page.goto("https://playwright.dev/")
+    yield
+    print("after the test runs")
+
+def test_main_navigation(page: Page):
+    # Убеждаемся, что страница загрузилась
     page.wait_for_load_state("load")
     
-    # Делаем скриншот светлой темы
+    # 1. Делаем первый скриншот (светлой темы)
     page.screenshot(path="light_theme.png")
     
-    # Нажимаем на кнопку смены темы
-    page.get_by_role("button", name="Switch between dark and light mode").click()
-    page.wait_for_timeout(1000)
+    print("Браузер на экране. Пожалуйста, кликните на смену темы...")
     
-    # Проверяем, что тема действительно переключилась в коде
-    expect(page.locator("html")).to_have_attribute("data-theme", "dark")
+    # 2. Ожидание вашего клика: код замирает, пока вы сами не нажмете на кнопку.
+    # Как только тема переключится в коде на "dark" — тест мгновенно продолжится.
+    page.wait_for_selector('html[data-theme="dark"]', timeout=15000)
     
-    # Делаем скриншот темной темы
+    # 3. Делаем финальный скриншот после вашего нажатия
     page.screenshot(path="dark_theme.png")
+    print("Тема изменена, скриншоты сохранены!")
 
-# Этот блок заставит файл самостоятельно скормить себя фреймворку pytest
+# Этот блок принудительно открывает видимое окно браузера на экране при запуске через python
 if __name__ == "__main__":
     pytest.main(["-v", "--headed", __file__])
